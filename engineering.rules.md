@@ -1,0 +1,14 @@
+# Engineering rules
+
+Apply these rules when planning, implementing, verifying, or reviewing changes in this repository.
+
+1. **Inspect before changing behaviour.** Read relevant source, contracts, tests, and repository instructions to understand current behaviour and constraints. **Decision:** change behaviour only when the evidence supports the intended change.
+2. **Keep work within its planned scope.** Use the selected feature or implementation-plan item as the boundary; trace changes to its acceptance criteria and avoid unrelated work. **Decision:** include a change only when it serves that scope.
+3. **Make consequential assumptions explicit.** Clarify missing contracts or behaviour; do not invent APIs, fields, permissions, or dependencies. If progress requires an assumption, state it and its impact. **Decision:** proceed on an assumption only when it is visible and necessary.
+4. **Choose the simplest sufficient implementation.** Meet the requirement without speculative abstractions, unnecessary configurability, or unrelated refactoring. **Decision:** prefer the smallest clear change that satisfies the acceptance criteria.
+6. **Use repository ontology for navigation.** Use the repository's ontology to locate concepts and context; verify current source and contracts before changing behaviour. **Decision:** use ontology as a guide, and current source and contracts as evidence.
+7. **Respect repository ownership.** Apply repository-specific coding guidance only within its owning repository. **Decision:** do not carry local conventions into another repository without evidence they apply.
+8. **Report verification accurately.** Name checks run and their outcomes; list skipped checks with a reason. Never claim execution evidence that does not exist. **Decision:** report only what was actually verified.
+9. **Complete plans against evidence.** Mark a plan item complete only when acceptance criteria are satisfied and required verification evidence is recorded; otherwise report remaining work or blockers. **Decision:** completion follows demonstrated results, not intent.
+10. **Protect data and credentials.** Use synthetic data and keep credentials out of code and logs. **Decision:** avoid exposing real sensitive data during implementation or verification.
+11. **Act within authorization.** Work autonomously within the authorized scope; obtain authorization before external publication, deployment, destructive actions, or unapproved costs. **Decision:** proceed on in-scope work and pause before those actions.

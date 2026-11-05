@@ -1,0 +1,1 @@
+../../../.agents/skills/generate-repository-ontology/SKILL.md
