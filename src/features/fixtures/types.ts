@@ -20,3 +20,13 @@ export interface FixtureData {
   fixtures: Fixture[]
   roundNamesByPhase: string[][]
 }
+
+export interface TeamOption {
+  id: number
+  name: string
+}
+
+export interface VenueOption {
+  id: number
+  name: string
+}
