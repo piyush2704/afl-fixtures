@@ -34,7 +34,7 @@ npm run preview  # Preview the production build locally
 
 ## Agent skills
 
-This repository includes four agent skills under [`.agents/skills/`](.agents/skills/). Each skill has a `SKILL.md` with its complete workflow and an `agents/openai.yaml` metadata file. The skills support an incremental process from feature definition through implementation and review:
+This repository includes four project skills, written in the open Agent Skills format, for an incremental process from feature definition through implementation and review. The shared instructions are in [`.agents/skills/`](.agents/skills/); [`.claude/skills/`](.claude/skills/) exposes the same skills to Claude Code through links to those `SKILL.md` files. This keeps one copy of each workflow for both tools. Each skill also has an `agents/openai.yaml` metadata file for Codex; Claude Code uses the shared `SKILL.md` and does not need that file.
 
 | Skill | Use it when | What it does |
 | --- | --- | --- |
@@ -43,9 +43,27 @@ This repository includes four agent skills under [`.agents/skills/`](.agents/ski
 | [`review-change`](.agents/skills/review-change/SKILL.md) | A specific diff or implemented increment needs review. | Checks for evidence-backed correctness, security, reliability, complexity, and verification issues; reports findings without changing the reviewed code. |
 | [`generate-repository-ontology`](.agents/skills/generate-repository-ontology/SKILL.md) | Documentation mapping the current codebase needs to be generated or refreshed. | Creates concise, source-backed technical context and navigation to help future contributors understand and safely change the project. |
 
-### Use the skills
+### Install and use the skills
 
-No separate package installation is needed. Keep the `.agents/skills/` directory in the repository checkout and use a coding agent that supports repository-local Agent Skills. Ask the agent to use a skill by name (for example, “Use `define-feature` to scope fixture filtering”), or select it through the agent's skill interface if available. The agent should read that skill's `SKILL.md`; the metadata file helps compatible tools identify and present it. Support and activation vary by coding tool, so check that tool's documentation if the skills are not detected.
+For this project, clone the repository and open the checkout in the coding tool. No separate package or global skill installation is required:
+
+```sh
+git clone <repository-url>
+cd afl-fixtures
+```
+
+Codex discovers project skills from `.agents/skills/<skill-name>/SKILL.md`. Claude Code discovers project skills from `.claude/skills/<skill-name>/SKILL.md`; this repository provides links there to the shared skill instructions. If your checkout or platform does not preserve those links, copy the skill directories from `.agents/skills/` into `.claude/skills/` for Claude Code. Keep the folder names and `SKILL.md` files intact.
+
+Invoke a skill explicitly when you want a particular workflow:
+
+```text
+Codex:       Use $define-feature to scope fixture filtering.
+Claude Code: /define-feature
+```
+
+Replace `define-feature` with `build-feature`, `review-change`, or `generate-repository-ontology` as appropriate. Claude Code can also select a skill automatically when your request matches its description. Check that the skill appears in the tool's skill list if it is not detected; in Claude Code, use `/skills` to inspect available skills. The instructions themselves are portable, but automatic discovery and invocation syntax depend on the coding tool.
+
+For Claude Code, project-level skills are loaded from `.claude/skills/` in the repository. To install a skill for your own use across projects instead, copy its directory under `~/.claude/skills/`. For Codex, the corresponding project and user skill locations are `.agents/skills/` and `~/.agents/skills/`.
 
 ## Project notes
 
