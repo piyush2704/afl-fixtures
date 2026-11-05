@@ -2,6 +2,16 @@
 
 A React and TypeScript client for browsing AFL fixtures from the supplied challenge API. Users can view match details and combine round, team, and venue filters without requesting the fixture again.
 
+## Screenshots
+
+Desktop view with the full fixture list and combined filters:
+
+![Desktop fixture schedule with team, venue, and round filters](docs/images/fixture-client-desktop.png)
+
+Mobile view with the team dropdown expanded:
+
+<img src="docs/images/fixture-client-mobile.png" alt="Mobile fixture schedule with the team selection dropdown open" width="390" />
+
 ## Run locally
 
 Use the Node version in [`.nvmrc`](.nvmrc) (24.22.2). The package engine requires Node >=22.12.0.
@@ -15,9 +25,11 @@ npm run dev
 Open the local URL printed by Vite. No `.env` file, API key, or backend setup is required. The public API base URL and `/fixture` path are defined in [`fixtureService.ts`](src/features/fixtures/services/fixtureService.ts). Internet access and the remote service's browser CORS support are required for live data and logos.
 
 ```sh
-npm run build    # Type-check and create the production build in dist/
-npm run lint     # Check source with Oxlint
-npm run preview  # Serve the production build locally after building
+npm run build      # Type-check and create the production build in dist/
+npm run lint       # Check source with Oxlint
+npm run preview    # Serve the production build locally after building
+npm test           # Run unit, component, and DOM accessibility tests
+npm run test:watch # Run tests in watch mode
 ```
 
 ## Challenge coverage
@@ -63,6 +75,9 @@ Declared packages and ranges are in [`package.json`](package.json); [`package-lo
 | Package | Role |
 | --- | --- |
 | React 19 and React DOM | Components, hooks, state, and browser rendering. |
+| @tanstack/react-query | Fixture request state, shared in-memory caching, retries, and cancellation. |
+| Vitest, React Testing Library, user-event, jest-dom, and jsdom | Test runner, component/hook interactions, assertions, and simulated DOM. |
+| axe-core | Development-only DOM accessibility checks; contrast and screen-reader behavior require separate review. |
 | TypeScript 7 and React/Node typings | Static checking of application and tooling code. |
 | Vite 8 and its React plugin | Development server and production build. |
 | Tailwind CSS 4 and its Vite plugin | Utility classes, responsive layout, and theme tokens. |
@@ -70,9 +85,23 @@ Declared packages and ranges are in [`package.json`](package.json); [`package-lo
 | shadcn and tw-animate-css | Existing UI scaffolding/configuration and imported CSS assets. |
 | class-variance-authority | Retained from scaffolding; currently unused by application source. |
 
-The custom filters use HTML controls and CSS rather than a UI runtime library. Radix UI, cn, and lucide-react were removed. Fetching currently uses the browser fetch API; TanStack Query is not installed or implemented.
+The custom filters use HTML controls and CSS rather than a UI runtime library. Radix UI, cn, and lucide-react were removed. TanStack Query manages fixture requests using the existing browser fetch service and parser.
 
-## Organisation and custom hook
+## Architecture decisions
+
+| Decision | Reason and consequence |
+| --- | --- |
+| Separate server data from filter state | TanStack Query owns fetched FixtureData; useFixtureFilters owns user selections. Refreshed responses update options/results without resetting selections while the hook stays mounted. |
+| Reuse a service and parser behind useFixtures | The service handles HTTP and cancellation; the parser validates the expected structure and adapts it for rendering. The query hook coordinates fetching, caching, and retries without embedding API traversal in the page. |
+| Derive options and visible fixtures | The original response remains intact. Keeping derived results out of state avoids synchronising multiple fixture copies as filters change. |
+| Keep three local useState selections | Round, team, and venue selection are small and independent; reset updates them together. A reducer or global store would add structure without a current need. |
+| Use controlled, reusable filter controls | RoundFilter and the team/venue adapters receive values and callbacks. MultiSelect owns only panel visibility, so selection rules remain in one hook and the same control serves both team and venue filters. |
+| Build on native inputs and CSS | Radio inputs and checkboxes provide browser interaction without additional UI runtime packages. The custom dropdown owns its focus and dismissal behavior, which is covered by interaction tests. |
+| Scope rendering failures to the fixture feature | The error boundary preserves the page shell. Request/parse failures use the query error state; rendering failures use the boundary. |
+
+Data flows from the fixture endpoint through the service, parser, and query cache into useFixtureFilters, then into controlled filters and fixture cards. Query settings and known data assumptions are documented below.
+
+## Organisation and custom hooks
 
 ```text
 src/
@@ -82,19 +111,40 @@ src/
     ui/                     Card, Alert, and reusable MultiSelect
   features/fixtures/
     components/             Fixture page/cards, teams, and filter adapters
-    hooks/useFixtureFilters.ts
+    hooks/
+      useFixtures.ts        TanStack Query fetching and cache settings
+      useFixtureFilters.ts  Local filter selection and derived results
     services/               HTTP request and response parsing
     types.ts                Fixture data and filter-option types
     utils/formatKickoff.ts   Browser-local kickoff formatting
+  test/                     Synthetic fixtures, query-client helpers, and test setup
 ```
 
-[`FixturePage`](src/features/fixtures/components/FixturePage.tsx) fetches and stores the complete parsed response and handles loading and request errors. [`parseFixtures`](src/features/fixtures/services/parseFixtures.ts) traverses `phases[].rounds[].matches[]`, attaches each match's enclosing round name, and returns `FixtureData`: the flat fixture list and round names grouped by phase, including empty rounds.
+[`useFixtures`](src/features/fixtures/hooks/useFixtures.ts) fetches and caches the complete parsed response through TanStack Query. A QueryClientProvider in main.tsx supplies one shared QueryClient. [`FixturePage`](src/features/fixtures/components/FixturePage.tsx) consumes the query’s data, pending state, and error rather than maintaining a fetch effect and duplicate request state. The query’s AbortSignal is passed to the existing fetch service for cancellation. [`parseFixtures`](src/features/fixtures/services/parseFixtures.ts) traverses `phases[].rounds[].matches[]`, attaches each match's enclosing round name, and returns `FixtureData`: the flat fixture list and round names grouped by phase, including empty rounds.
 
 [`useFixtureFilters`](src/features/fixtures/hooks/useFixtureFilters.ts) owns round, team, and venue selection state. It prepares distinct options, derives the visible fixture list, and exposes `selectRound`, `selectTeams`, `selectVenues`, and `resetFilters`. Keeping these rules together avoids growing the page component whenever a filter is added. The full fixture response is preserved; filtered copies are not stored in state.
 
 The hook uses three useState values, which are sufficient for the current filters. It does not fetch data, persist selections across unmounts, or require a global store. Data updates preserve the current selections rather than automatically clearing them.
 
 [`MultiSelect`](src/components/ui/multi-select.tsx) is shared by the team and venue adapters. The caller owns selected values; only open/closed panel state is local. It uses a button with expanded-state information, labelled native checkboxes, keyboard focus, outside-click dismissal, Escape dismissal with focus return, and a scrollable panel. The round filter uses native radio inputs.
+
+## Query settings
+
+The fixture query uses the key `['fixtures']`; filter selections are deliberately excluded because filtering happens locally over the same dataset. Its current configuration is:
+
+```ts
+queryKey: ['fixtures'],
+staleTime: 5 * 60 * 1000,
+retry: 3,
+```
+
+TanStack Query manages server-data freshness and request status. The filter hook independently manages user selections, so a query refresh does not reset the active filters.
+
+- **`staleTime: 5 * 60 * 1000` (five minutes):** A successful response stays fresh for five minutes. After that it is stale and eligible for refresh on mount, window focus, or reconnect using TanStack Query’s defaults. This does not poll the endpoint every five minutes, and we do not assume the dataset is static.
+- **`retry: 3`:** A failed query gets up to three retries after the initial attempt (four attempts in total), using TanStack Query’s default exponential retry delay. The page stays pending during initial retries and displays the error after they are exhausted. Fetch, JSON, and parsing failures all follow this policy.
+- **Freshness is not persistence:** The five-minute stale time controls refresh eligibility. Separately, unused queries use TanStack Query’s default five-minute garbage-collection window. A full browser reload clears this in-memory cache; explicit refetch or invalidation can refresh data before the stale time elapses.
+
+Fetching and filter selection remain separate. A new successful response rebuilds options/results without clearing the filter hook’s selections; remounting the filter hook itself resets those selections. No polling, persistent cache, or manual Retry button has been added.
 
 ## Trade-offs and assumptions
 
@@ -105,11 +155,13 @@ The hook uses three useState values, which are sufficient for the current filter
 - **Local time:** Kickoff formatting follows the viewer's browser time zone. Older feature documentation mentions GMT, but the current implementation preserves browser-local formatting.
 - **Rendering failures:** React's native error boundary needs a class component; the boundary wraps fixture content so the surrounding application layout remains visible on a rendering failure.
 
-## Verification and follow-up
+## Verification
 
-Build, lint, and whitespace checks passed for the current implementation before this README update. Browser checks during development exercised filter combinations, reset, dropdown dismissal and keyboard use, and 320 px layouts. These are manual checks, not an automated test suite or a claim that every failure state or browser has been verified.
+Run `npm test`, `npm run build`, and `npm run lint` to verify the project. The suite covers filter combinations, reset and bye rules, parsing, request failures and cancellation, dropdown interactions, query retries/cache reuse, and selection preservation across refreshed data. Requests are mocked and fixture records are synthetic; tests do not depend on the live endpoint. Query tests use isolated clients and zero retry delay to exercise the three-retry policy without waiting through production backoff. They also verify that data is fresh before five minutes and refetches on remount after becoming stale.
 
-Unit tests, further failure/empty-response coverage, and evaluating TanStack Query are planned follow-up work. They are not implemented yet. The local sample data remains in the repository but is not used as an API-failure fallback. Feature briefs and the repository ontology provide additional context, but some describe earlier increments; re-check current source before relying on their implementation descriptions.
+The axe checks cover loading, results, open filter panels, empty states, and request errors in jsdom. Contrast/layout and actual screen-reader behavior are outside those automated checks; score aria-label support remains a manual-review finding. Browser checks during earlier development exercised keyboard interaction and 320 px layouts, but are not a claim that every browser or failure state is verified.
+
+The local sample data remains in the repository but is not used as an API-failure fallback. Feature briefs and the repository ontology provide additional context, but some describe earlier increments; re-check current source before relying on their implementation descriptions.
 
 ## Agent skills
 

@@ -1,48 +1,25 @@
-import { useEffect, useState } from 'react'
 import { Alert } from '@/components/ui/alert'
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary'
 import { useFixtureFilters } from '../hooks/useFixtureFilters'
-import { fetchFixtureResponse } from '../services/fixtureService'
-import { parseFixtures } from '../services/parseFixtures'
+import { useFixtures } from '../hooks/useFixtures'
 import type { FixtureData } from '../types'
 import { FixtureCard } from './FixtureCard'
 import { RoundFilter } from './RoundFilter'
 import { TeamFilter } from './TeamFilter'
 import { VenueFilter } from './VenueFilter'
 
+const emptyFixtureData: FixtureData = { fixtures: [], roundNamesByPhase: [] }
+
 export function FixturePage() {
   return <ErrorBoundary><FixturePageContent /></ErrorBoundary>
 }
 
 function FixturePageContent() {
-  const [data, setData] = useState<FixtureData>({ fixtures: [], roundNamesByPhase: [] })
+  const { data = emptyFixtureData, isPending, isError, error } = useFixtures()
   const {
     rounds, teams, venues, selectedRound, selectedTeamIds, selectedVenueIds, visibleFixtures,
     selectRound, selectTeams, selectVenues, resetFilters,
   } = useFixtureFilters(data)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    const controller = new AbortController()
-
-    async function loadFixtures() {
-      try {
-        const response = await fetchFixtureResponse(controller.signal)
-        const data = parseFixtures(response)
-        if (!controller.signal.aborted) setData(data)
-      } catch (failure) {
-        if (!controller.signal.aborted) {
-          setError(failure instanceof Error ? failure.message : 'Unable to load fixtures.')
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
-      }
-    }
-
-    void loadFixtures()
-    return () => controller.abort()
-  }, [])
-
   const selectedTeamNames = teams.filter(team => selectedTeamIds.includes(team.id)).map(team => team.name)
   const selectedVenueNames = venues.filter(venue => selectedVenueIds.includes(venue.id)).map(venue => venue.name)
   const emptyMessage = data.fixtures.length === 0
@@ -51,10 +28,10 @@ function FixturePageContent() {
 
   return <section aria-labelledby="fixture-heading" className="space-y-6">
     <h2 id="fixture-heading" className="text-lg font-medium">Fixture schedule</h2>
-    {loading ? (
+    {isPending ? (
       <div role="status" className="flex justify-center py-12"><span aria-hidden="true" className="size-8 animate-spin rounded-full border-4 border-blue-800 border-t-transparent motion-reduce:animate-none" /><span className="sr-only">Loading fixtures</span></div>
-    ) : error ? (
-      <Alert><h3 className="font-semibold">Unable to load fixtures</h3><p className="mt-2 text-sm">{error}</p></Alert>
+    ) : isError ? (
+      <Alert><h3 className="font-semibold">Unable to load fixtures</h3><p className="mt-2 text-sm">{error instanceof Error ? error.message : 'Unable to load fixtures.'}</p></Alert>
     ) : (
       <>
         <div className="space-y-3">
