@@ -7,7 +7,7 @@ export function FixtureCard({ fixture }: { fixture: Fixture }) {
   const bye = fixture.status.code === 'BYE'
 
   return (
-    <Card className="w-full gap-0 overflow-hidden border-t-4 border-t-blue-800 pt-0">
+    <Card className="w-full gap-0 overflow-hidden border-t-4 border-t-blue-800 pt-0 pb-6">
       <div className="flex justify-center">
         <div className="max-w-full rounded-b-xl bg-secondary px-5 py-2 text-center text-sm font-semibold text-secondary-foreground sm:px-10">
           {bye ? 'Bye' : fixture.date && (
