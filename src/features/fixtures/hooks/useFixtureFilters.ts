@@ -9,7 +9,7 @@ import type { FixtureData, TeamOption, VenueOption } from '../types'
  *
  * @param data - Complete parsed fixtures and round names grouped by phase.
  * Empty data is supported while the caller is loading.
- * @returns `rounds`: unique round names, naturally sorted within API phase order;
+ * @returns `rounds`: unique round names in API response order;
  * `selectedRound`: the original round name, or null for "All fixtures";
  * `teams`: distinct teams from the complete data, alphabetically sorted;
  * `selectedTeamIds`: selected IDs, or an empty list for no team restriction;
@@ -33,9 +33,7 @@ export function useFixtureFilters(data: FixtureData) {
   const [selectedTeamIds, selectTeams] = useState<number[]>([])
   const [selectedVenueIds, selectVenues] = useState<number[]>([])
 
-  const rounds = [...new Set(data.roundNamesByPhase.flatMap(names =>
-    [...names].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-  ))]
+  const rounds = [...new Set(data.roundNamesByPhase.flat())]
   const teamsById = new Map<number, TeamOption>()
   const venuesById = new Map<number, VenueOption>()
   for (const fixture of data.fixtures) {

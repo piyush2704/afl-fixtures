@@ -21,7 +21,7 @@ export function RoundFilter({ rounds, selectedRound, onRoundChange }: RoundFilte
               className="peer absolute inset-0 size-full cursor-pointer opacity-0"
             />
             <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-muted peer-checked:bg-accent peer-checked:text-accent-foreground peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50">
-              {round === null ? 'All fixtures' : round.replace(/^Round (\d+)$/, '$1')}
+              {round ?? 'All fixtures'}
             </span>
           </label>
         ))}
