@@ -15,7 +15,7 @@ describe('accessibility audit', () => {
         rules: { 'color-contrast': { enabled: false } },
       })
       expect(result.violations).toEqual([])
-      // axe marks aria-label on score paragraphs as incomplete: reviewed separately.
+      expect(result.incomplete).toEqual([])
     }
     document.documentElement.lang = 'en'
     document.title = 'AFL Fixtures'

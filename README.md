@@ -155,11 +155,60 @@ Fetching and filter selection remain separate. A new successful response rebuild
 - **Local time:** Kickoff formatting follows the viewer's browser time zone. Older feature documentation mentions GMT, but the current implementation preserves browser-local formatting.
 - **Rendering failures:** React's native error boundary needs a class component; the boundary wraps fixture content so the surrounding application layout remains visible on a rendering failure.
 
-## Verification
+## Tests and verification
 
-Run `npm test`, `npm run build`, and `npm run lint` to verify the project. The suite covers filter combinations, reset and bye rules, parsing, request failures and cancellation, dropdown interactions, query retries/cache reuse, and selection preservation across refreshed data. Requests are mocked and fixture records are synthetic; tests do not depend on the live endpoint. Query tests use isolated clients and zero retry delay to exercise the three-retry policy without waiting through production backoff. They also verify that data is fresh before five minutes and refetches on remount after becoming stale.
+After `npm ci`, run these commands from the repository root. Tests do not require the development server or a running backend.
 
-The axe checks cover loading, results, open filter panels, empty states, and request errors in jsdom. Contrast/layout and actual screen-reader behavior are outside those automated checks; score aria-label support remains a manual-review finding. Browser checks during earlier development exercised keyboard interaction and 320 px layouts, but are not a claim that every browser or failure state is verified.
+```sh
+npm test
+```
+
+Runs the complete suite once and exits with a nonzero status if a test fails. The latest verified run contains **73 passing tests across seven files**, including parameterized cases.
+
+```sh
+npm run test:watch
+```
+
+Starts Vitest watch mode for development; relevant tests rerun as files change. Press `q` to exit.
+
+Run an individual file or tests matching a name:
+
+```sh
+npm test -- src/features/fixtures/hooks/useFixtureFilters.test.ts
+npm test -- src/features/fixtures/hooks/useFixtures.test.tsx
+npm test -- -t "reset clears every restriction"
+```
+
+### Test coverage
+
+| Suite | Behaviors covered |
+| --- | --- |
+| [Filter hook](src/features/fixtures/hooks/useFixtureFilters.test.ts) | Initial state; round ordering and empty rounds; distinct alphabetical team/venue options; home/away matching; OR within selections and AND between filters; no duplicate matches; stable options; bye visibility; independent selection changes; reset; empty results; refreshed data preserving selections; no input mutation. |
+| [Fixture query](src/features/fixtures/hooks/useFixtures.test.tsx) | Parsed response and cancellation signal; three retries after the first failure; recovery during retries; fresh cache reuse on remount/focus; cancellation on unmount; five-minute freshness boundary; explicit refresh preserving filter selections. |
+| [Fixture page](src/features/fixtures/components/FixturePage.test.tsx) | Loading and control visibility; successful cards, byes, and zero scores; network/HTTP/JSON/payload failures; successful empty responses; unmount cancellation and obsolete results; StrictMode behavior; combined filters without refetching; reset; bye rules; contextual no-results messages; empty round controls. |
+| [Response parser](src/features/fixtures/services/parseFixtures.test.ts) | Flattening phases/rounds in response order; enclosing round names; empty rounds/collections; minimal bye entries; zero scores; rejection of malformed collections and incomplete or invalid standard matches. |
+| [Fetch service](src/features/fixtures/services/fixtureService.test.ts) | Endpoint and AbortSignal forwarding; JSON decoding; HTTP errors; network failures; invalid JSON; cancellation propagation. |
+| [Multi-select control](src/components/ui/multi-select.test.tsx) | Open/closed state and accessible labels; multiple selections and deselection; selected counts; keyboard opening/selection; Escape with focus return; outside-click and Tab dismissal; external reset; string values and empty options. |
+| [DOM accessibility](src/test/accessibility.test.tsx) | axe checks of loading, results, open team/venue panels, empty filter results, an empty response, and request-error presentation. |
+
+### Test setup and boundaries
+
+Vitest runs React Testing Library and user-event tests in jsdom, with jest-dom assertions. [Synthetic fixture data](src/test/fixtures.ts) keeps cases small and predictable. Fetch requests are mocked; no test calls the live fixture API.
+
+[Query test helpers](src/test/queryClient.tsx) create isolated clients and clear them after tests. Retry delays are zero in tests so the production three-retry policy can be exercised quickly; production backoff is unchanged. Cache-age tests set response timestamps instead of waiting five minutes.
+
+[Shared setup](src/test/setup.ts) cleans up rendered components and stubbed globals after each test. scrollIntoView is mocked because jsdom does not calculate layout. These tests verify behavior and DOM semantics, not visual positioning, actual scrolling, or mobile-browser rendering.
+
+The axe suite disables color-contrast checks because jsdom cannot evaluate them reliably. Contrast, layout, and actual screen-reader behavior require separate review; score aria-label support remains a manual-review finding. Earlier browser checks exercised keyboard interaction and 320 px layouts, but do not establish full accessibility compliance.
+
+For the complete local verification sequence:
+
+```sh
+npm test
+npm run build
+npm run lint
+git diff --check
+```
 
 The local sample data remains in the repository but is not used as an API-failure fallback. Feature briefs and the repository ontology provide additional context, but some describe earlier increments; re-check current source before relying on their implementation descriptions.
 

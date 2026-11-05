@@ -1,9 +1,9 @@
 import { StrictMode } from 'react'
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiResponse } from '@/test/fixtures'
-import { renderWithQuery } from '@/test/queryClient'
+import { createTestQueryClient, queryWrapper, renderWithQuery } from '@/test/queryClient'
 import { FixturePage } from './FixturePage'
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -166,4 +166,41 @@ describe('FixturePage filter controls', () => {
     await user.click(screen.getByRole('radio', { name: 'Empty Round' }))
     expect(screen.getByRole('radio', { name: 'Empty Round' })).toBeChecked()
   })
+
+  it('updates a polite atomic results status while keeping focus on the filter', async () => {
+    const user = await loadedPage()
+    expect(screen.getByRole('status')).toHaveTextContent('5 fixtures found.')
+    expect(screen.getByRole('status')).toHaveAttribute('aria-atomic', 'true')
+    const round = screen.getByRole('radio', { name: 'Round 2' })
+    await user.click(round)
+    expect(screen.getByRole('status')).toHaveTextContent('1 fixture found.')
+    expect(round).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }))
+    expect(screen.getByRole('status')).toHaveTextContent('5 fixtures found.')
+  })
+
+  it('keeps cached fixtures and active filters usable after a failed background refresh', async () => {
+    const user = userEvent.setup()
+    const client = createTestQueryClient()
+    render(<FixturePage />, { wrapper: queryWrapper(client) })
+    await screen.findByRole('button', { name: 'Filter by team' })
+    await user.click(screen.getByRole('button', { name: 'Filter by team' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Alpha' }))
+    await user.keyboard('{Escape}')
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    fetchMock.mockRejectedValue(new Error('Temporary refresh failure'))
+    await act(async () => { await client.invalidateQueries({ queryKey: ['fixtures'] }) })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to refresh fixtures')
+    expect(screen.getByRole('alert')).toHaveTextContent('Showing the previously loaded schedule')
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.getByRole('button', { name: 'Filter by team (1 selected)' })).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Round 1' }))
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('1 fixture found.')
+    fetchMock.mockImplementation(async () => response())
+    await act(async () => { await client.invalidateQueries({ queryKey: ['fixtures'] }) })
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(screen.getByRole('radio', { name: 'Round 1' })).toBeChecked()
+  })
+
 })

@@ -10,6 +10,9 @@ export function Team({ squad }: { squad: Squad }) {
       {showLogo ? <img className="h-full max-w-full object-contain" src={`https://react-code-test.s3.ap-southeast-2.amazonaws.com/logos/${encodeURIComponent(squad.code)}.svg`} alt="" onError={() => setFailed(true)} /> : <span className="flex min-h-16 items-center justify-center rounded-lg bg-muted px-2 text-sm font-semibold [overflow-wrap:anywhere]">{squad.name}</span>}
     </div>
     {showLogo && <p className="text-sm font-semibold [overflow-wrap:anywhere] sm:text-base">{squad.name}</p>}
-    {squad.score && <p className="text-sm font-medium tabular-nums sm:text-base" aria-label={`${squad.name}: ${squad.score.goals} goals, ${squad.score.behinds} behinds, ${squad.score.points} points`}>{squad.score.goals}.{squad.score.behinds} ({squad.score.points})</p>}
+    {squad.score && <p className="text-sm font-medium tabular-nums sm:text-base">
+      <span aria-hidden="true">{squad.score.goals}.{squad.score.behinds} ({squad.score.points})</span>
+      <span className="sr-only">{squad.name}: {squad.score.goals} goals, {squad.score.behinds} behinds, {squad.score.points} points</span>
+    </p>}
   </div>
 }

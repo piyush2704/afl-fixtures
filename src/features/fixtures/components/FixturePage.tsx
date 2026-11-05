@@ -15,7 +15,8 @@ export function FixturePage() {
 }
 
 function FixturePageContent() {
-  const { data = emptyFixtureData, isPending, isError, error } = useFixtures()
+  const { data: queryData, isPending, isError, error } = useFixtures()
+  const data = queryData ?? emptyFixtureData
   const {
     rounds, teams, venues, selectedRound, selectedTeamIds, selectedVenueIds, visibleFixtures,
     selectRound, selectTeams, selectVenues, resetFilters,
@@ -25,18 +26,24 @@ function FixturePageContent() {
   const emptyMessage = data.fixtures.length === 0
     ? 'No fixtures available.'
     : `No fixtures available${selectedTeamNames.length ? ` for ${selectedTeamNames.join(', ')}` : ''}${selectedVenueNames.length ? ` at ${selectedVenueNames.join(', ')}` : ''}${selectedRound !== null ? ` in ${selectedRound}` : ''}.`
+  const resultsMessage = visibleFixtures.length
+    ? `${visibleFixtures.length} ${visibleFixtures.length === 1 ? 'fixture' : 'fixtures'} found.`
+    : emptyMessage
 
   return <section aria-labelledby="fixture-heading" className="space-y-6">
     <h2 id="fixture-heading" className="text-lg font-medium">Fixture schedule</h2>
     {isPending ? (
       <div role="status" className="flex justify-center py-12"><span aria-hidden="true" className="size-8 animate-spin rounded-full border-4 border-blue-800 border-t-transparent motion-reduce:animate-none" /><span className="sr-only">Loading fixtures</span></div>
-    ) : isError ? (
+    ) : isError && queryData === undefined ? (
       <Alert><h3 className="font-semibold">Unable to load fixtures</h3><p className="mt-2 text-sm">{error instanceof Error ? error.message : 'Unable to load fixtures.'}</p></Alert>
     ) : (
       <>
+        {isError && (
+          <Alert><h3 className="font-semibold">Unable to refresh fixtures</h3><p className="mt-2 text-sm">Showing the previously loaded schedule. Please try again later.</p></Alert>
+        )}
         <div className="space-y-3">
           <div className="flex justify-end">
-            <button type="button" onClick={resetFilters} className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2">
+            <button type="button" onClick={resetFilters} className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground">
               Reset filters
             </button>
           </div>
@@ -46,15 +53,12 @@ function FixturePageContent() {
           </div>
         </div>
         <RoundFilter rounds={rounds} selectedRound={selectedRound} onRoundChange={selectRound} />
+        <p role="status" aria-atomic="true" className="text-sm text-muted-foreground">{resultsMessage}</p>
         {visibleFixtures.length ? (
           <ul className="mx-auto flex w-full flex-col gap-5">
             {visibleFixtures.map(fixture => <li key={fixture.id}><FixtureCard fixture={fixture} /></li>)}
           </ul>
-        ) : (
-          <p role="status" className="text-muted-foreground">
-            {emptyMessage}
-          </p>
-        )}
+        ) : null}
       </>
     )}
   </section>

@@ -62,10 +62,10 @@ export function MultiSelect<Value extends string | number>({
             setOpen(true)
           }
         }}
-        className="flex w-full items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-left text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="flex w-full items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-left text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
       >
         <span>{label}{selectedValues.length > 0 && ` (${selectedValues.length} selected)`}</span>
-        <span aria-hidden="true" className={`mr-1 size-2 shrink-0 border-r-2 border-b-2 ${open ? '-rotate-135' : 'rotate-45'}`} />
+        <span aria-hidden="true" className={`mr-1 size-2 shrink-0 border-r-2 border-b-2 border-current ${open ? '-rotate-135' : 'rotate-45'}`} />
       </button>
       {open && (
         <fieldset
@@ -82,7 +82,7 @@ export function MultiSelect<Value extends string | number>({
                 onChange={event => onChange(event.currentTarget.checked
                   ? [...selectedValues, option.value]
                   : selectedValues.filter(value => value !== option.value))}
-                className="size-4 shrink-0 accent-blue-800"
+                className="size-4 shrink-0 accent-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
               />
               <span className="[overflow-wrap:anywhere]">{option.label}</span>
             </label>

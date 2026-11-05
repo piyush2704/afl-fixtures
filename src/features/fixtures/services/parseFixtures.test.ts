@@ -58,4 +58,35 @@ describe('parseFixtures', () => {
   ])('rejects incomplete or invalid non-bye entries rather than dropping them', entry => {
     expect(() => parseFixtures(payload(entry))).toThrow()
   })
+
+  it.each([
+    'id', 'roundOrder',
+    'status.id', 'status.code', 'status.name', 'status.typeId', 'status.typeName',
+    'type.id', 'type.code', 'type.name',
+    'squads.home.id', 'squads.home.code', 'squads.home.name',
+    'squads.away.id', 'squads.away.code', 'squads.away.name',
+    'squads.home.score.goals', 'squads.home.score.behinds', 'squads.home.score.points',
+    'squads.away.score.goals', 'squads.away.score.behinds', 'squads.away.score.points',
+    'venue.id', 'venue.code', 'venue.name', 'venue.timeZone',
+    'date.utcMatchStart', 'date.startDate', 'date.startTime',
+  ])('rejects a missing declared field: %s', path => {
+    const entry = structuredClone(match()) as unknown as Record<string, unknown>
+    const parts = path.split('.')
+    let parent = entry
+    for (const part of parts.slice(0, -1)) parent = parent[part] as Record<string, unknown>
+    delete parent[parts[parts.length - 1]]
+    expect(() => parseFixtures(payload(entry))).toThrow()
+  })
+
+  it.each([
+    { ...match(), id: Infinity },
+    { ...match(), squads: { home: { ...match().squads.home, id: '1' }, away: match().squads.away } },
+    { ...match(), venue: { ...match().venue, id: NaN } },
+    { ...match(), squads: { ...match().squads, home: { ...match().squads.home, code: 42 } } },
+    { ...match(), venue: { ...match().venue, name: ' ' } },
+    { ...bye, squads: { home: { ...bye.squads.home, score: { goals: 'bad', behinds: 0, points: 0 } } } },
+  ])('rejects invalid identities and malformed optional bye fields', entry => {
+    expect(() => parseFixtures(payload(entry))).toThrow()
+  })
+
 })
