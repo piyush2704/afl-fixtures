@@ -2,14 +2,16 @@
 
 | Direction | Purpose and source evidence |
 | --- | --- |
-| Browser → React DOM → React components | [main.tsx](../../src/main.tsx) mounts the component tree; [App](../../src/App.tsx) composes the shell. |
-| Vite → React/Tailwind plugins | [vite.config.ts](../../vite.config.ts) configures transformation and styling. Build failures propagate through the package build command. |
-| Global CSS → Tailwind, tw-animate-css, shadcn CSS | [index.css](../../src/index.css) imports package styles; package availability is required during the build. |
-| Shared helper → cn package | [utils.ts](../../src/lib/utils.ts) re-exports `cn`; the current shell does not use the helper. |
-| shadcn configuration → future generated UI source | [components.json](../../components.json) records paths and theme. No generated UI primitive is currently rendered. |
+| Browser → React DOM → components | [main.tsx](../../src/main.tsx) mounts App; [FixturePage](../../src/features/fixtures/components/FixturePage.tsx) owns request state. |
+| Fixture feature → configured HTTP API | [fixtureService](../../src/features/fixtures/services/fixtureService.ts) appends `/fixture` to `VITE_API_BASE_URL`, passes an AbortSignal, rejects missing configuration and non-OK HTTP responses, and decodes JSON. |
+| JSON response → fixture records | [parseFixtures](../../src/features/fixtures/services/parseFixtures.ts) traverses phases/rounds/matches, attaches round names, and rejects incompatible data. |
+| Team component → S3 images | [Team](../../src/features/fixtures/components/Team.tsx) builds `https://react-code-test.s3.ap-southeast-2.amazonaws.com/logos/{encoded code}.svg`; failed images fall back to text. |
+| UI → native controls, styling, and icons | [RoundFilter](../../src/features/fixtures/components/RoundFilter.tsx) uses native radios and Tailwind classes; Card and Alert use ordinary className strings. FixturePage uses Lucide LoaderCircle. |
+| Vite → React/Tailwind plugins | [vite.config.ts](../../vite.config.ts) configures transformation, styling, and the source alias. |
+| Global CSS → package styles | [index.css](../../src/index.css) imports Tailwind, tw-animate-css, and shadcn CSS. |
 
-[package.json](../../package.json) also declares class-variance-authority, Lucide React, and Radix UI. They are installed UI foundations; the inspected shell does not import them. The shadcn package and animation CSS are declared as dev dependencies; global CSS imports their assets at build time.
+The [API ticket](../ticket/feature-list-api.md) documents the supplied AWS API Gateway endpoint; runtime selection comes from configuration, not a hard-coded host. Browser requests require the configured service to permit cross-origin access. No proxy or backend is configured in Vite. Live service behavior and CORS were not checked during this refresh.
 
-The [fixture brief](../fixture-feature.md) describes an AWS API Gateway fixture endpoint and S3 logo URLs. Neither is called by the current application. Response validation, CORS, request failures, retry behavior, and logo failure handling have no implemented runtime behavior yet. This generation did not contact either service or validate their contracts.
+[package.json](../../package.json) still declares class-variance-authority, but inspected application source does not import it. radix-ui and cn have been removed from direct dependencies and the current lockfile; Toggle/ToggleGroup wrappers and src/lib/utils.ts have been deleted. shadcn and animation CSS are dev dependencies whose assets are used at build time. There is no data-fetching library or error-boundary dependency.
 
-No environment variables, database, server application, authentication, or persistence usage was found in the inspected application source. This is a source-scope observation rather than an infrastructure audit.
+No database, authentication, server application, or persistence usage was found in inspected application source. This is not an infrastructure audit.

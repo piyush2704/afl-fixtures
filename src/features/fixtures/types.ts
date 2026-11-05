@@ -15,3 +15,8 @@ export interface Fixture {
   date?: { utcMatchStart: string; startDate: string; startTime: string }
   venue?: { id: number; code: string; name: string; timeZone: string }
 }
+
+export interface FixtureData {
+  fixtures: Fixture[]
+  roundNamesByPhase: string[][]
+}
